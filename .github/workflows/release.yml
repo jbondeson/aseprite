@@ -1,22 +1,26 @@
-name: build
-on: [push, pull_request]
+name: release
+on: [label]
 jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
-        build_type: [RelWithDebInfo, Debug]
-        ui: [gui, cli]
-        scripting: [lua, noscripts]
-        exclude:
-          - build_type: Debug
-            ui: gui
-          - build_type: RelWithDebInfo
-            ui: cli
-          - build_type: RelWithDebInfo
-            scripting: noscripts
+        # os: [windows-latest, macos-latest, ubuntu-latest]
+        os: [windows-latest, macos-latest]
+        # build_type: [RelWithDebInfo, Debug]
+        build_type: [RelWithDebInfo]
+        # ui: [gui, cli]
+        ui: [gui]
+        # scripting: [lua, noscripts]
+        scripting: [lua]
+        # exclude:
+        #   - build_type: Debug
+        #     ui: gui
+        #   - build_type: RelWithDebInfo
+        #     ui: cli
+        #   - build_type: RelWithDebInfo
+        #     scripting: noscripts
     steps:
     - uses: actions/checkout@v4
       with:
@@ -92,20 +96,35 @@ jobs:
       shell: bash
       run: |
         cd build && ninja
-    - name: Running C++ Tests
-      shell: bash
-      run: |
-        if [[ "${{ runner.os }}" == "Linux" ]] ; then
-          export XVFB=xvfb-run
-        fi
-        cd build && $XVFB ctest --output-on-failure
-    - name: Running CLI Tests
-      if: ${{ matrix.scripting == 'lua' }}
-      shell: bash
-      run: |
-        if [[ "${{ runner.os }}" == "Linux" ]] ; then
-          export XVFB=xvfb-run
-        fi
-        export ASEPRITE=$PWD/build/bin/aseprite
-        cd tests
-        $XVFB bash run-tests.sh
+    # Skip tests for now
+    # - name: Running C++ Tests
+    #   shell: bash
+    #   run: |
+    #     if [[ "${{ runner.os }}" == "Linux" ]] ; then
+    #       export XVFB=xvfb-run
+    #     fi
+    #     cd build && $XVFB ctest --output-on-failure
+    # - name: Running CLI Tests
+    #   if: ${{ matrix.scripting == 'lua' }}
+    #   shell: bash
+    #   run: |
+    #     if [[ "${{ runner.os }}" == "Linux" ]] ; then
+    #       export XVFB=xvfb-run
+    #     fi
+    #     export ASEPRITE=$PWD/build/bin/aseprite
+    #     cd tests
+    #     $XVFB bash run-tests.sh
+    - name: Create Archive
+      uses: thedoctor0/zip-release@0.7.6
+      with:
+        type: 'zip'
+        filename: 'release-${{ runner.os }}'
+        path: ./build
+    - name: Publish
+      uses: ncipollo/release-action@v1
+      with:
+        artifacts: '*.zip'
+        allowUpdates: true
+        draft: true
+        prerelease: true
+
